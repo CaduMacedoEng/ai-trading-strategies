@@ -65,3 +65,52 @@ def create_hist_prices(start_date, end_date, min_obs_per_ticker=100):
     historical_prices = historical_prices[valid_tickers]
 
     return historical_prices
+
+# Create a function called 'computingReturns' that takes prices and a list of integers (momentums) as an input
+def computingReturns(historical_prices, list_of_momentums):
+    '''
+    Takes as an input a dataframe of prices and a list of momentums and returns a dataframe with returns over 
+    the momentum list and 1 day foward returns
+    '''
+
+    # Initialize the forecast horizon
+    forecast_horizon = 1
+    
+    # Compute forward returns by taking percentage change of close prices
+    f_returns = historical_prices.pct_change(forecast_horizon, fill_method=None)
+
+    # We then shift the forward returns
+    f_returns = f_returns.shift(-forecast_horizon)
+
+    # Pivot the dataframe
+    f_returns = pd.DataFrame(f_returns.unstack())
+    
+    # Name the column based on the forecast horizon
+    name = "F_" + str(forecast_horizon) + "_d_returns"
+    
+    f_returns.rename(columns={0: name}, inplace=True)
+
+    # Initialize total_returns with forward returns
+    total_returns = f_returns
+
+    # Iterate over the list of momentum values
+    for i in list_of_momentums:
+        # Compute returns for each momentum value
+        feature = historical_prices.pct_change(i, fill_method=None)
+        feature = pd.DataFrame(feature.unstack())
+    
+        # Name the colum based on the momentum value
+        name = str(i) + "_d_returns"
+        feature.rename(columns={0:name}, inplace=True)
+    
+        # Rename columns and reset index
+        feature.rename(columns={0: name, 'level_0': 'Ticker'}, inplace=True)
+    
+        # Merge computed feature returns with total_returns based on Ticker and Date
+        total_returns = pd.merge(total_returns, feature, left_index=True, right_index=True, how='outer')
+
+    total_returns.dropna(axis=0, how='any', inplace=True)
+    
+
+    # return the total returns DataFrame
+    return total_returns
