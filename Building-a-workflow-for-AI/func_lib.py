@@ -114,3 +114,56 @@ def computingReturns(historical_prices, list_of_momentums):
 
     # return the total returns DataFrame
     return total_returns
+
+def compute_BM_Perf(total_returns):
+    """ computes benchmark performance for investment universe and returns cumulative and calendar returns """
+
+    # Compute the daily mean of all stocks. This will be our equal weighted benchmark
+    daily_mean = pd.DataFrame(total_return.loc[:,'F_1_d_returns'].groupby(level='Date').mean())
+    daily_mean.rename(columns={'F_1_d_returns':'SP&500'}, inplace=True)
+    
+    # Convert daily returns to cumulative returns
+    cum_returns = pd.DataFrame((daily_mean[['SP&500']]+1).cumprod())
+    
+    # Ploting the cumulative returns
+    cum_returns.plot()
+    
+    # Customizing the plot
+    plt.title('Cumulative Returns Over Time', fontsize=16, fontweight='bold')
+    plt.xlabel('Date', fontsize=14)
+    plt.ylabel('Cumulative Return', fontsize=14)
+    plt.grid(True)
+    plt.xticks(rotation=45)
+    plt.legend(title_fontsize='13', fontsize='11')
+    
+    # Display the plot
+    plt.show()
+    
+    # Calculate the number of years in the dataset
+    days_of_trading = 252
+    number_of_years = len(daily_mean) / days_of_trading # Assuming 252 trading days in a year
+    
+    ending_value = cum_returns['SP&500'].iloc[-1]
+    beginning_value = cum_returns['SP&500'].iloc[1]
+    
+    # Compute the Compound Annual Growth Rate (CAGR)
+    ratio = ending_value/beginning_value
+    cagr = round((ratio**(1/number_of_years)-1)*100,2)
+    
+    print(f'The CAGR is: {cagr}%')
+    
+    # Compute the Sharpe Ratio by annualizing the daily meaen and the daily std
+    average_daily_return = daily_mean[['SP&500']].describe().iloc[1,:] * days_of_trading
+    stand_dev_daily_return = daily_mean[['SP&500']].describe().iloc[2,:] * pow(days_of_trading,1/2)
+    
+    sharpe = average_daily_return/stand_dev_daily_return
+    
+    print(f'Sharpe Ratio of Strategy: {round(sharpe.iloc[0],2)}')
+    
+    # df_daily_mean.rename(columns={target: 'Strategy'}, inplace=True)
+    ann_returns = (pd.DataFrame((daily_mean[['SP&500']]+1).groupby(daily_mean.index.get_level_values(0).year).cumprod())-1)*100
+    calendar_returns = pd.DataFrame(ann_returns['SP&500'].groupby(daily_mean.index.get_level_values(0).year).last())
+    
+    calendar_returns.plot.bar(rot=30, legend='top_left') #.opts(multi_level=False)
+
+    return cum_returns, calendar_returns
